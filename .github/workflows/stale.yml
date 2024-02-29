@@ -16,8 +16,9 @@ jobs:
     - uses: actions/stale@v5
       with:
         stale-issue-message: 'This issue has been open for more than 365 days with no activity. Is this issue still relavant? If not please close the issue.'
-        days-before-issue-stale: -1
+        days-before-issue-stale: 0
         days-before-issue-close: -1
+        close-issue-label: 'Resolution/Stale'
         stale-pr-message: 'This PR has been open for more than 90 days with no activity. This will be closed in 3 days unless the `stale` label is removed or commented.'
         close-pr-message: 'Closed PR due to inactivity for more than 90 days.'
         days-before-pr-stale: 90
