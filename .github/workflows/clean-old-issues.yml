@@ -1,0 +1,63 @@
+name: Close Old  Issues
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Runs every day at midnight
+
+jobs:
+  close_issues:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        
+      - name: Close old unlabeled issues
+        run: |
+          #!/bin/bash
+          
+          # Get the GitHub token from environment variables
+          TOKEN=$GITHUB_TOKEN
+          
+          # Get the repository owner and name
+          REPO_OWNER=$(echo $GITHUB_REPOSITORY | cut -d'/' -f1)
+          REPO_NAME=$(echo $GITHUB_REPOSITORY | cut -d'/' -f2)
+          
+          # Define the label name to check for
+          LABEL_NAME="PROD"
+          
+          # Get today's date in Unix timestamp
+          TODAY=$(date -d "$(date +%Y-%m-%d)" +%s)
+          
+          # Calculate the date one year ago in Unix timestamp
+          ONE_YEAR_AGO=$(date -d "$(date +%Y-%m-%d) - 1 year" +%s)
+          
+          # Get all open issues in the repository
+          ISSUES=$(curl -s -H "Authorization: token $TOKEN" "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/issues?state=open")
+          
+          # Iterate through each issue
+          for row in $(echo "${ISSUES}" | jq -r '.[] | @base64'); do
+              _jq() {
+                  echo ${row} | base64 --decode | jq -r ${1}
+              }
+              # Get issue creation date
+              CREATED_AT=$(_jq '.created_at')
+              
+              # Convert issue creation date to Unix timestamp
+              CREATED_AT_UNIX=$(date -d "$CREATED_AT" +%s)
+              
+              # Get issue number
+              ISSUE_NUMBER=$(_jq '.number')
+              
+              # Check if the issue is older than one year and doesn't have the label "PROD"
+              if [ "$CREATED_AT_UNIX" -lt "$ONE_YEAR_AGO" ] && ! curl -s -H "Authorization: token $TOKEN" "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/issues/$ISSUE_NUMBER/labels" | jq -r '.[].name' | grep -q "$LABEL_NAME"; then
+                  # Close the issue
+                  curl -s -X PATCH -H "Authorization: token $TOKEN" -d '{"state":"closed"}' "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/issues/$ISSUE_NUMBER"
+                  
+                  # Add a comment to the closed issue
+                  COMMENT_BODY="Closed the issue as it was opened more than a year ago and open since. Please reopen if this issue is still relevant."
+                  curl -s -X POST -H "Authorization: token $TOKEN" -d "{\"body\":\"$COMMENT_BODY\"}" "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/issues/$ISSUE_NUMBER/comments"
+              fi
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
