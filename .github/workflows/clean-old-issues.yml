@@ -31,7 +31,7 @@ jobs:
           TODAY=$(date -d "$(date +%Y-%m-%d)" +%s)
           
           # Calculate the date one year ago in Unix timestamp
-          ONE_YEAR_AGO=$(date -d "$(date +%Y-%m-%d) - 1 year" +%s)
+          ONE_YEAR_AGO=$(date -d "$(date +%Y-%m-%d) - 2 year" +%s)
           
           # Get all open issues in the repository
           ISSUES=$(curl -s -H "Authorization: token $TOKEN" "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/issues?state=open")
